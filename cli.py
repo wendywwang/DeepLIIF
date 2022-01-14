@@ -115,14 +115,14 @@ def cli():
 @click.option('--save-by-iter', is_flag=True, help='whether saves model by iteration')
 @click.option('--remote', type=bool, default=False, help='whether isolate visdom checkpoints or not; if False, you can run a separate visdom server anywhere that consumes the checkpoints')
 @click.option('--pickle-transfer-cmd', type=str, default=None, help='module and function to be used to transfer the pickled checkpoins for visdom, for example mymodule.myfunction')
-@click.option('--local_rank', type=int, default=None)
+@click.option('--local-rank', type=int, default=None)
 def train(dataroot, name, gpu_ids, checkpoints_dir, targets_no, input_nc, output_nc, ngf, ndf, net_d, net_g,
           n_layers_d, norm, init_type, init_gain, no_dropout, direction, serial_batches, num_threads,
           batch_size, load_size, crop_size, max_dataset_size, preprocess, no_flip, display_winsize, epoch, load_iter,
           verbose, lambda_l1, is_train, display_freq, display_ncols, display_id, display_server, display_env,
           display_port, update_html_freq, print_freq, no_html, save_latest_freq, save_epoch_freq, save_by_iter,
           continue_train, epoch_count, phase, lr_policy, n_epochs, n_epochs_decay, beta1, lr, lr_decay_iters,
-          remote, pickle_transfer_cmd):
+          remote, pickle_transfer_cmd, local_rank):
     """General-purpose training script for multi-task image-to-image translation.
 
     This script works for various models (with option '--model': e.g., DeepLIIF) and
@@ -135,13 +135,6 @@ def train(dataroot, name, gpu_ids, checkpoints_dir, targets_no, input_nc, output
     Use '--continue_train' to resume your previous training.
     """
 
-    # set gpu ids
-    str_ids = gpu_ids.split(',')
-    gpu_ids = []
-    for str_id in str_ids:
-        id = int(str_id)
-        if id >= 0:
-            gpu_ids.append(id)
     if len(gpu_ids) > 0:
         local_rank = os.getenv("LOCAL_RANK")
         if local_rank is not None:
@@ -153,7 +146,6 @@ def train(dataroot, name, gpu_ids, checkpoints_dir, targets_no, input_nc, output
 
     if local_rank is not None: # LOCAL_RANK will be assigned a rank number if torchrun ddp is used
         dist.init_process_group(backend='nccl')
-        print('local rank:',local_rank)
 
     # create a dataset given dataset_mode and other options
     dataset = AlignedDataset(dataroot, load_size, crop_size, input_nc, output_nc, direction, targets_no, preprocess,

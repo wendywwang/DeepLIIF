@@ -93,6 +93,11 @@ class Visualizer():
             fn = 'opt.pickle'            
             if (self.use_multi_proc and self.rank == 0) or (not self.use_multi_proc):
                 path_source = os.path.join(self.pickle_dir,fn)
+                
+                opt = {'display_id': display_id, 'is_train': is_train, 'no_html': no_html, 'display_winsize': display_winsize, 'name': name, 
+                       'display_port': display_port, 'display_ncols': display_ncols, 'display_server': display_server, 'display_env': display_env,
+                       'checkpoints_dir': checkpoints_dir, 'remote': remote, 'pickle_transfer_cmd': pickle_transfer_cmd}
+                
                 pickle.dump(opt,open(path_source,'wb'))
                 print(f'Remote mode, snapshot created: {fn}')
                 if self.pickle_transfer_cmd is not None:

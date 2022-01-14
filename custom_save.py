@@ -7,9 +7,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 USER_ACCESS_TOKEN = os.environ['USER_ACCESS_TOKEN']
-BASE_URL = os.environ['BASE_URL']
+BASE_URL = os.getenv('BASE_URL', os.getenv('RUNTIME_ENV_APSX_URL'))
 
-volume_display_name = 'DeepLiif-Data'
+volume_display_name = 'DeepLIIFData'
 
 def save_to_storage_volume(path_source, verbose=1, retry=5):
     """

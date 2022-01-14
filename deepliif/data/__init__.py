@@ -81,7 +81,6 @@ class CustomDatasetDataLoader(object):
         sampler = None
         if os.getenv('LOCAL_RANK') is not None or os.getenv('RANK') is not None:
             sampler = DistributedSampler(self.dataset) if len(gpu_ids) > 0 else None
- 
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             sampler=sampler,
