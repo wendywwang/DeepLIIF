@@ -1,0 +1,89 @@
+#### Download Datasets ####
+cd /mnts/deepliif-data
+mkdir DeepLIIF_Datasets
+cd DeepLIIF_Datasets
+wget https://zenodo.org/record/4751737/files/DeepLIIF_Training_Set.zip
+wget https://zenodo.org/record/4751737/files/DeepLIIF_Validation_Set.zip
+wget https://zenodo.org/record/4751737/files/DeepLIIF_Testing_Set.zip
+
+unzip DeepLIIF_Training_Set.zip
+unzip DeepLIIF_Validation_Set.zip
+unzip DeepLIIF_Testing_Set.zip
+rm -rf DeepLIIF_*.zip
+
+mv DeepLIIF_Training_Set train
+mv DeepLIIF_Validation_Set val
+mv DeepLIIF_Testing_Set test
+
+cd train; ls -t1 | tail -n +100 | xargs rm -r; cd ../
+cd val; ls -t1 | tail -n +100 | xargs rm -r; cd ../
+cd test; ls -t1 | tail -n +100 | xargs rm -r; cd ../
+
+
+
+# ------------------------------------------------------------------------------------------------
+
+
+
+#### WS DP 1 GPU #### PASS
+python train.py --dataroot /mnts/deepliif-data/DeepLIIF_Datasets/ --name Test_Model --model DeepLIIF --gpu_ids 0 --remote True --checkpoints_dir /mnts/deepliif-data/deepliif-ws-output --batch_size 2
+
+python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/deepliif-ws-output/Test_Model/pickle
+
+#### WS DDP 1 worker single gpu #### PASS
+torchrun -t 3 --log_dir /userfs/log/ --nproc_per_node 1 train.py --dataroot /mnts/deepliif-data/DeepLIIF_Datasets/ --name ws-20220103-num_threads0-batch_size2-num_workers1 --model DeepLIIF --checkpoints_dir /mnts/deepliif-data/deepliif-ws-output/ --batch_size 2  --remote True
+
+python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/deepliif-ws-output/ws-20220103-num_threads0-batch_size2-num_workers1/pickle
+
+
+#### WMLA PyTorch 1 worker single gpu #### PASS
+!python dlicmd.py --exec-start PyTorch --rest-host $HOST --rest-port -1 --jwt-token $USER_ACCESS_TOKEN \
+                  --msd-env USER_ACCESS_TOKEN=$USER_ACCESS_TOKEN --msd-env BASE_URL=https://daell-wmla.datascienceelite.com \
+                  --workerDeviceNum 1 --workerMemory 8g \
+                  --model-dir $DIR_job_submission --model-main train_command.py \
+                  --cs-datastore-meta type=fs,data_path=DeepLIIF_Datasets/
+
+python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/checkpoints/pickle
+
+#### WMLA distPyTorch 1 worker single gpu #### PASS
+!python dlicmd.py --exec-start distPyTorch --rest-host $HOST --rest-port -1 --jwt-token $USER_ACCESS_TOKEN \
+                  --msd-env USER_ACCESS_TOKEN=$USER_ACCESS_TOKEN --msd-env BASE_URL=https://daell-wmla.datascienceelite.com \
+                  --numWorker 1 --workerMemory 8g \
+                  --model-dir $DIR_job_submission --model-main train_command.py \
+                  --cs-datastore-meta type=fs,data_path=DeepLIIF_Datasets_Full/
+
+python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/checkpoints/pickle
+
+
+
+#### WS DP 2 GPUs #### PASS
+python train.py --dataroot /mnts/deepliif-data/DeepLIIF_Datasets/ --name Test_Model --model DeepLIIF --gpu_ids 0,1 --remote True --checkpoints_dir /mnts/deepliif-data/deepliif-ws-output --batch_size 4
+
+python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/deepliif-ws-output/Test_Model/pickle
+
+#### WS DDP 2 workers single gpu #### PASS
+torchrun -t 3 --log_dir /userfs/log/ --nproc_per_node 2 train.py --dataroot /mnts/deepliif-data/DeepLIIF_Datasets/ --name ws-20220103-num_threads0-batch_size2-num_workers2 --model DeepLIIF --checkpoints_dir /mnts/deepliif-data/deepliif-ws-output/ --batch_size 2  --remote True
+
+python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/deepliif-ws-output/ws-20220103-num_threads0-batch_size2-num_workers2/pickle --n_proc 2
+
+
+#### WMLA PyTorch 1 worker 2 gpus #### PASS
+!python dlicmd.py --exec-start PyTorch --rest-host $HOST --rest-port -1 --jwt-token $USER_ACCESS_TOKEN \
+                  --msd-env USER_ACCESS_TOKEN=$USER_ACCESS_TOKEN --msd-env BASE_URL=https://daell-wmla.datascienceelite.com \
+                  --workerDeviceNum 2 --workerMemory 8g \
+                  --model-dir $DIR_job_submission --model-main train_command.py \
+                  --cs-datastore-meta type=fs,data_path=DeepLIIF_Datasets/
+
+python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/checkpoints/pickle
+
+#### WMLA distPyTorch 2 workers single gpu #### PASS
+!python dlicmd.py --exec-start distPyTorch --rest-host $HOST --rest-port -1 --jwt-token $USER_ACCESS_TOKEN \
+                  --msd-env USER_ACCESS_TOKEN=$USER_ACCESS_TOKEN --msd-env BASE_URL=https://daell-wmla.datascienceelite.com \
+                  --numWorker 2 --workerMemory 8g \
+                  --model-dir $DIR_job_submission --model-main train_command.py \
+                  --cs-datastore-meta type=fs,data_path=DeepLIIF_Datasets_Full/
+
+python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/checkpoints/pickle  --n_proc 2
+
+
+# ------------------------------------------------------------------------------------------------

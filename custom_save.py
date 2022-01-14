@@ -35,7 +35,7 @@ def save_to_storage_volume(path_source, verbose=1, retry=5):
         else:
             print(f'FAILED: status code {res.status_code}')
             if count_trial < retry:
-                print(f'FAILED: Unable to save file to storage volume, {res.text()}; wait for 3s and retry...')
+                print(f'FAILED: Unable to save file to storage volume, {res.text}; wait for 3s and retry...')
                 time.sleep(3)
             else:
-                raise Exception(f'FAILED: Unable to save file to storage volume, {res.json()}; maximum retry reached')
+                raise Exception(f'FAILED: Unable to save file to storage volume, {res.text}; maximum retry reached')

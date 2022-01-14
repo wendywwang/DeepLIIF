@@ -141,7 +141,16 @@ class BaseModel(ABC):
                 net = getattr(self, 'net' + name)
 
                 if len(self.gpu_ids) > 0 and torch.cuda.is_available():
-                    torch.save(net.module.cpu().state_dict(), save_path)
+                    local_rank = os.getenv('LOCAL_RANK')
+                    rank = os.getenv('RANK')
+                    
+                    if local_rank is None and rank is None: # DP
+                        torch.save(net.module.cpu().state_dict(), save_path)
+                    elif local_rank == '0' or rank == '0': # DDP, rank 0
+                        torch.save(net.module.state_dict(), save_path) # saving net.module.cpu().state_dict() causes the next iter hangs at back propagation
+                    else: # DDP, rank != 0
+                        pass
+                   
                     net.cuda(self.gpu_ids[0])
                 else:
                     torch.save(net.cpu().state_dict(), save_path)

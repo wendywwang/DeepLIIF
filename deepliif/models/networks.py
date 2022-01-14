@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
+import os
 
 
 ###############################################################################
@@ -112,7 +113,13 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
     if len(gpu_ids) > 0:
         assert(torch.cuda.is_available())
         net.to(gpu_ids[0])
-        net = torch.nn.DistributedDataParallel(net, broadcast_buffers=False)  # multi-GPUs
+        if os.getenv('LOCAL_RANK') is not None or os.getenv('RANK') is not None:
+            net = torch.nn.SyncBatchNorm.convert_sync_batchnorm(net)
+            # broadcast_buffers=False: https://github.com/pytorch/pytorch/issues/22095#issuecomment-505099500
+            net = torch.nn.parallel.DistributedDataParallel(net,broadcast_buffers=False)
+        else:
+            net = torch.nn.DataParallel(net, gpu_ids)
+            
     init_weights(net, init_type, init_gain=init_gain)
     return net
 

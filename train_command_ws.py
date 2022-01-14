@@ -8,7 +8,7 @@ root_folder='/mnts/deepliif-data/DeepLIIF_Datasets'#os.getenv("DATA_DIR")
 
 import subprocess
 print('Install packages...')
-subprocess.run('pip install dominate visdom gpustat --user',shell=True)
+subprocess.run('pip install dominate visdom numba gpustat --user; pip install torch==1.10.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html',shell=True)
 
 # print('Detecting keyword DLI in env vars from python...')
 # subprocess.run('env | grep DLI | wc -l',shell=True)
