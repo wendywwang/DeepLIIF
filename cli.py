@@ -13,6 +13,22 @@ from deepliif.data import create_dataset, AlignedDataset, transform
 from deepliif.models import inference, postprocess, compute_overlap, init_nets, DeepLIIFModel
 from deepliif.util import allowed_file, Visualizer
 
+import torch.distributed as distributed
+import os
+import torch
+
+def init_process():
+
+    print( 'tcp://' + os.environ['MASTER_ADDR'] + ':' + os.environ['MASTER_PORT'])
+    print("WORLD_SIZE=" + os.environ['WORLD_SIZE'] + ", RANK=" + os.environ['RANK'])
+	
+    distributed.init_process_group( 
+        backend='nccl',
+        init_method='tcp://' + os.environ['MASTER_ADDR'] + ':' + os.environ['MASTER_PORT'],
+        rank=int(os.environ['RANK']),
+        world_size=int(os.environ['WORLD_SIZE']))
+
+
 
 def ensure_exists(d):
     if not os.path.exists(d):
@@ -126,6 +142,8 @@ def train(dataroot, name, gpu_ids, checkpoints_dir, targets_no, input_nc, output
     plot, and save models.The script supports continue/resume training.
     Use '--continue_train' to resume your previous training.
     """
+
+    init_process()
 
     # create a dataset given dataset_mode and other options
     dataset = AlignedDataset(dataroot, load_size, crop_size, input_nc, output_nc, direction, targets_no, preprocess,

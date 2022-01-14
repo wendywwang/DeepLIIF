@@ -21,6 +21,8 @@ from PIL import Image
 from .base_dataset import __make_power_2, BaseDataset
 from .aligned_dataset import AlignedDataset
 
+from torch.utils.data.distributed import DistributedSampler
+
 
 def find_dataset_using_name(dataset_name):
     """Import the module "data/[dataset_name]_dataset.py".
@@ -74,10 +76,12 @@ class CustomDatasetDataLoader(object):
         self.max_dataset_size = max_dataset_size
         self.dataset = dataset
         print("dataset [%s] was created" % type(self.dataset).__name__)
+        sampler = DistributedSampler(self.dataset)
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
+            sampler=sampler,
             batch_size=batch_size,
-            shuffle=not serial_batches,
+            shuffle=(sampler is None),
             num_workers=int(num_threads))
 
     def load_data(self):
