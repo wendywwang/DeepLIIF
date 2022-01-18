@@ -165,24 +165,20 @@ class BaseModel(ABC):
 
                         if local_rank is None and rank is None: # DP
                             torch.save(net.module.cpu().state_dict(), save_path)
-                            custom_save(save_path, self.remote_transfer_cmd, self.remote_transfer_cmd_module,
-                                        self.remote_transfer_cmd_function)
+                            custom_save(save_path, self.remote_transfer_cmd_module, self.remote_transfer_cmd_function)
                         elif local_rank == '0' or rank == '0': # DDP, rank 0
                             torch.save(net.module.state_dict(), save_path) # saving net.module.cpu().state_dict() causes the next iter hangs at back propagation
-                            custom_save(save_path, self.remote_transfer_cmd, self.remote_transfer_cmd_module,
-                                        self.remote_transfer_cmd_function)
+                            custom_save(save_path, self.remote_transfer_cmd_module, self.remote_transfer_cmd_function)
                         else: # DDP, rank != 0
                             pass
                     else:
                         torch.save(net.module.cpu().state_dict(), save_path)
-                        custom_save(save_path, self.remote_transfer_cmd, self.remote_transfer_cmd_module,
-                                        self.remote_transfer_cmd_function)
+                        custom_save(save_path, self.remote_transfer_cmd_module, self.remote_transfer_cmd_function)
 
                     net.cuda(self.gpu_ids[0])
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
-                    custom_save(save_path, self.remote_transfer_cmd, self.remote_transfer_cmd_module,
-                                        self.remote_transfer_cmd_function)
+                    custom_save(save_path, self.remote_transfer_cmd_module, self.remote_transfer_cmd_function)
 
 
 
