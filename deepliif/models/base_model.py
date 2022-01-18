@@ -44,6 +44,9 @@ class BaseModel(ABC):
         self.metric = 0  # used for learning rate policy 'plateau'
         self.remote_transfer_cmd = remote_transfer_cmd
 
+        self.remote_transfer_cmd_module = None
+        self.remote_transfer_cmd_function = None
+
         if self.remote_transfer_cmd:
             self.remote_transfer_cmd_module = remote_transfer_cmd.split('.')[0]
             self.remote_transfer_cmd_function = remote_transfer_cmd.split('.')[1]
