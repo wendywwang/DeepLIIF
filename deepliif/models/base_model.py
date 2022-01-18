@@ -15,7 +15,7 @@ class BaseModel(ABC):
         -- <modify_commandline_options>:    (optionally) add model-specific options and set default options.
     """
 
-    def __init__(self, gpu_ids, is_train, checkpoints_dir, name, preprocess, lr_policy, remote_transfer, remote_transfer_cmd):
+    def __init__(self, gpu_ids, is_train, checkpoints_dir, name, preprocess, lr_policy, remote_transfer_cmd):
         """Initialize the BaseModel class.
 
         Parameters:
@@ -42,7 +42,6 @@ class BaseModel(ABC):
         self.optimizers = []
         self.image_paths = []
         self.metric = 0  # used for learning rate policy 'plateau'
-        self.remote_transfer = remote_transfer
         self.remote_transfer_cmd = remote_transfer_cmd
 
         if self.remote_transfer_cmd:
@@ -173,7 +172,15 @@ class BaseModel(ABC):
                             pass
                     else:
                         torch.save(net.module.cpu().state_dict(), save_path)
-                        custom_save(self.opt,save_path)
+                        custom_save(save_path, self.remote_transfer_cmd, self.remote_transfer_cmd_module,
+                                        self.remote_transfer_cmd_function)
+
+                    net.cuda(self.gpu_ids[0])
+                else:
+                    torch.save(net.cpu().state_dict(), save_path)
+                    custom_save(save_path, self.remote_transfer_cmd, self.remote_transfer_cmd_module,
+                                        self.remote_transfer_cmd_function)
+
 
 
     def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
