@@ -203,8 +203,6 @@ def train(dataroot, name, gpu_ids, checkpoints_dir, targets_no, input_nc, output
     # the total number of training iterations
     total_iters = 0
 
-     #model.print_networks(verbose=True)
-
     # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
     for epoch in range(epoch_count, n_epochs + n_epochs_decay + 1):
         # timer for entire epoch
@@ -248,23 +246,20 @@ def train(dataroot, name, gpu_ids, checkpoints_dir, targets_no, input_nc, output
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
                 if display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / len(dataset), losses)
-                    import sys
-                    sys.exit(0)
-
 
             # cache our latest model every <save_latest_freq> iterations
             if total_iters % save_latest_freq == 0:
                 print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
                 save_suffix = 'iter_%d' % total_iters if save_by_iter else 'latest'
-                #model.save_networks(save_suffix)
+                model.save_networks(save_suffix)
 
             iter_data_time = time.time()
 
         # cache our model every <save_epoch_freq> epochs
         if epoch % save_epoch_freq == 0:
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
-            #model.save_networks('latest')
-            #model.save_networks(epoch)
+            model.save_networks('latest')
+            model.save_networks(epoch)
 
         print('End of epoch %d / %d \t Time Taken: %d sec' % (
             epoch, n_epochs + n_epochs_decay, time.time() - epoch_start_time))
