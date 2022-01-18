@@ -157,9 +157,9 @@ class Visualizer():
                              'save_result':save_result},
                              open(path_source,'wb'))
                 print(f'Remote mode, snapshot refreshed: {fn}')
-                if self.pickle_transfer_cmd is not None:
-                    exec(f'from {self.pickle_transfer_cmd_module} import {self.pickle_transfer_cmd_function}')
-                    exec(f'{self.pickle_transfer_cmd_function}("{path_source}")')
+                if self.remote_transfer_cmd is not None:
+                    exec(f'from {self.remote_transfer_cmd_module} import {self.remote_transfer_cmd_function}')
+                    exec(f'{self.remote_transfer_cmd_function}("{path_source}")')
         else:
             if self.display_id > 0:  # show images in the browser using visdom
                 ncols = self.ncols
