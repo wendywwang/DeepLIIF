@@ -13,13 +13,12 @@ volume_display_name = 'DeepLIIFData'
 
 def save_to_storage_volume(path_source, verbose=1, retry=5):
     """
+    Given file to path, save to designated storage volume directory.
     retry: number of times to retry if request fails
     """
-    path_target = 'checkpoints/pickle/'+path_source.split('/')[-1]
-    path_target_encoded = urllib.parse.quote(path_target,safe='')
-    
+    path_target_encoded = urllib.parse.quote(path_source,safe='')
     url = f'/zen-volumes/{volume_display_name}/v1/volumes/files/{path_target_encoded}'
-    
+
     count_trial = 0
     while count_trial < retry:
         count_trial += 1
@@ -30,7 +29,7 @@ def save_to_storage_volume(path_source, verbose=1, retry=5):
 
         if res.status_code == 200:
             if verbose > 0:
-                print(f'Success: {path_source} is saved to storage volume {volume_display_name} at {path_target}')
+                print(f'Success: {path_source} is saved to storage volume {volume_display_name} at {path_source}')
                 return None
         else:
             print(f'FAILED: status code {res.status_code}')

@@ -52,7 +52,7 @@ class Visualizer():
     """
 
     def __init__(self, display_id, is_train, no_html, display_winsize, name, display_port, display_ncols,
-                 display_server, display_env, checkpoints_dir, remote, pickle_transfer_cmd):
+                 display_server, display_env, checkpoints_dir, remote, remote_transfer_cmd):
         """Initialize the Visualizer class
 
         Parameters:
@@ -73,7 +73,8 @@ class Visualizer():
         self.port = display_port
         self.saved = False
         self.remote = remote # with a remote visdom
-        self.pickle_transfer_cmd = pickle_transfer_cmd
+        self.remote_transfer_cmd = remote_transfer_cmd
+
         self.pickle_dir = os.path.join(checkpoints_dir, name, 'pickle') # pickled variables to be passed to a remote visdom
         self.use_multi_proc = False
         self.rank = None
@@ -96,15 +97,15 @@ class Visualizer():
                 
                 opt = {'display_id': display_id, 'is_train': is_train, 'no_html': no_html, 'display_winsize': display_winsize, 'name': name, 
                        'display_port': display_port, 'display_ncols': display_ncols, 'display_server': display_server, 'display_env': display_env,
-                       'checkpoints_dir': checkpoints_dir, 'remote': remote, 'pickle_transfer_cmd': pickle_transfer_cmd}
+                       'checkpoints_dir': checkpoints_dir, 'remote': remote, 'remote_transfer_cmd': remote_transfer_cmd}
                 
                 pickle.dump(opt,open(path_source,'wb'))
                 print(f'Remote mode, snapshot created: {fn}')
-                if self.pickle_transfer_cmd is not None:
-                    self.pickle_transfer_cmd_module = self.pickle_transfer_cmd.split('.')[0]
-                    self.pickle_transfer_cmd_function = self.pickle_transfer_cmd.split('.')[1]
-                    exec(f'from {self.pickle_transfer_cmd_module} import {self.pickle_transfer_cmd_function}')
-                    exec(f'{self.pickle_transfer_cmd_function}("{path_source}")')
+                if self.remote_transfer_cmd is not None:
+                    self.remote_transfer_cmd_module = self.remote_transfer_cmd.split('.')[0]  # TODO: ask wendy if this split should happen outside this func
+                    self.remote_transfer_cmd_function = self.remote_transfer_cmd.split('.')[1]
+                    exec(f'from {self.remote_transfer_cmd_module} import {self.remote_transfer_cmd_function}')
+                    exec(f'{self.remote_transfer_cmd_function}("{path_source}")')
 
         if self.display_id > 0:  # connect to a visdom server given <display_port> and <display_server>
             import visdom
@@ -257,9 +258,9 @@ class Visualizer():
                              'losses':losses},
                              open(path_source,'wb'))
                 print(f'Remote mode, snapshot refreshed: {fn}, epoch: {epoch}, counter_ratio: {counter_ratio}')
-                if self.pickle_transfer_cmd is not None:
-                    exec(f'from {self.pickle_transfer_cmd_module} import {self.pickle_transfer_cmd_function}')
-                    exec(f'{self.pickle_transfer_cmd_function}("{path_source}")')
+                if self.remote_transfer_cmd is not None:
+                    exec(f'from {self.remote_transfer_cmd_module} import {self.remote_transfer_cmd_function}')
+                    exec(f'{self.remote_transfer_cmd_function}("{path_source}")')
         else:
             if not hasattr(self, 'plot_data'):
                 self.plot_data = {'X': [], 'Y': [], 'legend': list(losses.keys())}
