@@ -143,7 +143,7 @@ class BaseModel(ABC):
                 the moment takes LONGER time!!!
         """
         def custom_save(save_path, remote_transfer_cmd_module, remote_transfer_cmd_function):
-            if self.remote_transfer_cmd:
+            if remote_transfer_cmd_module and remote_transfer_cmd_function:
                 exec(f'from {remote_transfer_cmd_module} import {remote_transfer_cmd_function}')
                 exec(f'{remote_transfer_cmd_function}("{save_path}")')
             else:
