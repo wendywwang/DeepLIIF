@@ -86,7 +86,7 @@ class CustomDatasetDataLoader(object):
             sampler=sampler,
             batch_size=batch_size,
             shuffle=not serial_batches if sampler is None else False,
-            num_workers=0)  #int(num_threads))
+            num_workers=int(num_threads))
         self.sampler=sampler            
 
     def load_data(self):
