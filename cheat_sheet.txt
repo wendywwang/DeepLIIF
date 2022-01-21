@@ -64,9 +64,9 @@ python train.py --dataroot /mnts/deepliif-data/DeepLIIF_Datasets/ --name Test_Mo
 python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/deepliif-ws-output/Test_Model/pickle
 
 #### WS DDP 2 workers single gpu #### PASS
-torchrun -t 3 --log_dir /userfs/log/ --nproc_per_node 2 train.py --dataroot /mnts/deepliif-data/DeepLIIF_Datasets/ --name ws-20220103-num_threads0-batch_size2-num_workers2 --model DeepLIIF --checkpoints_dir /mnts/deepliif-data/deepliif-ws-output/ --batch_size 2  --remote True
+torchrun -t 3 --log_dir /userfs/log/ --nproc_per_node 2 cli.py train --dataroot /mnts/DeepLIIFData/DeepLIIF_Datasets/ --name Test_Model_wendy_ws --batch-size 2 --num-threads 0 --remote True --gpu-ids 0 --gpu-ids 1 --checkpoints-dir /mnts/DeepLIIFData/deepliif-ws-output --display-freq 300
 
-python run_visualizer_local.py --pickle_dir /mnts/deepliif-data/deepliif-ws-output/ws-20220103-num_threads0-batch_size2-num_workers2/pickle --n_proc 2
+python run_visualizer_local.py --pickle_dir /mnts/DeepLIIFData/deepliif-ws-output/Test_Model_wendy_ws/pickle
 
 
 #### WMLA PyTorch 1 worker 2 gpus #### PASS
