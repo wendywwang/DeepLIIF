@@ -13,7 +13,7 @@ Use DP if you
 
 Use DDP if you
 - are willing to try a slightly different way to launch the training than before, OR
-- do have multiple GPU machines for cross-node distributino, OR
+- do have multiple GPU machines for cross-node distribution, OR
 - want to get as fast training as possible
 
 
@@ -37,6 +37,7 @@ DDP usually spawns multiple processes.
 
 **DeepLIIF's code follows the PyTorch recommendation to spawn 1 process per GPU** ([doc](https://github.com/pytorch/examples/blob/master/distributed/ddp/README.md#application-process-topologies)). If you want to assign multiple GPUs to each process, you will need to make modifications to DeepLIIF's code (see [doc](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html#combine-ddp-with-model-parallelism)).
 
+Despite all the benefits of DDP, one drawback is the extra GPU memory needed for dedicated CUDA buffer for communication. See a short discussion [here](https://discuss.pytorch.org/t/do-dataparallel-and-distributeddataparallel-affect-the-batch-size-and-gpu-memory-consumption/97194/2). In the context of DeepLIIF, this means that there might be situations where you could use a *bigger batch size with DP* as compared to DDP, which may actually train faster than using DDP with a smaller batch size.
 
 ### Train with DDP
 #### 1. Local Machine
@@ -50,6 +51,10 @@ Note that
 3. `-t 3 --log_dir <log_dir>` is not required, but is a useful setting in `torchrun` that saves the log from each process to your target log directory. For example:
 ```
 torchrun -t 3 --log_dir <log_dir> --nproc_per_node 2 cli.py train --dataroot <data_dir> --batch-size 3 --gpu-ids 0 --gpu-ids 1
+```
+4. If your PyTorch is older than 1.10, instead of `torchrun`, you can use `torch.distributed.launch`:
+```
+python -m torch.distributed.launch --nproc_per_node 2 cli.py train --dataroot <data_dir> --batch-size 3 --gpu-ids 0 --gpu-ids 1
 ```
 
 #### 2. Kubernetes-Based Training Service
@@ -76,13 +81,13 @@ Note that
 #### 3. Multiple Virtual Machines
 To launch training across multiple VMs, you can refer to the scheduler framework you use. For each process, similar to the example for kubernetes, you will need to initiate the process group so that the current process knows who it is, where are its peers, etc., and then execute the regular training command in a subprocess.
 
-## Move from Single-GPU to Multi-GPU: Impact on Hypter-Parameters
-To achieve equivalently good training results, you may want to adjust some hypter-parameters you figured out for a single GPU training.
+## Move from Single-GPU to Multi-GPU: Impact on Hyper-Parameters
+To achieve equivalently good training results, you may want to adjust some hyper-parameters you figured out for a single GPU training.
 
 ### Batch Size & Learning Rate
-Backward propagation by default runs at the end of every batch to find how much changes to make in parameters. An immediate outcome from using multiple GPUs is that we have a larger effective batch size. 
+Backward propagation by default runs at the end of every batch to find how much change to make in parameters. An immediate outcome from using multiple GPUs is that we have a larger effective batch size. 
 
-In DDP, this means fewer gradient descent because DDP averages the gradients from all processes ([doc](https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel)). Assume thats in 1 epoch, a single-GPU training does gradient descent for 200 times. Now with 2 GPUs/processes, the training will have 100 batches in each process and does the gradient descent using the averaged gradients of the 2 GPUs/processes, one for each batch, which is 100 times.
+In DDP, this means fewer gradient descent because DDP averages the gradients from all processes ([doc](https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel)). Assume that in 1 epoch, a single-GPU training does gradient descent for 200 times. Now with 2 GPUs/processes, the training will have 100 batches in each process and does the gradient descent using the averaged gradients of the 2 GPUs/processes, one for each batch, which is 100 times.
 
 You may want to compensate this by increasing the learning rate proportionally.
 
