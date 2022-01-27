@@ -92,3 +92,68 @@ In DDP, this means fewer gradient descent because DDP averages the gradients fro
 You may want to compensate this by increasing the learning rate proportionally.
 
 DP is slightly different, in that it sums up the gradients from all GPUs/threads ([doc](https://pytorch.org/docs/stable/generated/torch.nn.DataParallel.html#torch.nn.DataParallel)). However, practically the performance (accuracy) still suffers from the larger effective batch size, which can be mitigated by increasing the learning rate.
+
+
+## Track Training Progress in Visualizer
+When using multiple GPUs for training, tracking training progress in the visdom visualizer can be tricky. It may not be a big issue for DP which uses only 1 process, but definitely the multi-processing in DDP brings a challenge.
+
+With DDP, each process trains on its own slice of data that is different from the others. If we plot the training progress from the processes in terms of losses, the raw values will not be comparable, and you will see a different graph from each process. These graphs might be close, but will not be exactly the same.
+
+Currently, if you use multiple processes (DDP), you are suggested to:
+1. pass `--remote True` to the training command, even if you are running on a local machine
+2. open a terminal in an environment you intend to have visdom running (it can be the same place where you train the model, or a separate machine), run a visualizer script:
+```
+python run_visualizer_local.py --pickle_dir <pickle_dir>
+```
+
+By default, the pickle files are stored under `<checkpoint_dir_in_training_command>/<name_in_training_command>/pickle`.
+
+`--remote True` triggers DeepLIIF training to i) not start a visdom session and ii) persist the input into the visdom graphs as pickle files. If there are multiple processes, it will **only persist the information such as losses from the first process (process with rank 0)**. The separate script `run_visualizer_local.py` then starts the visdom, scans the pickle directory you provided periodically, and updates the graphs if there is an update in any pickled snapshot.
+
+If you plan to train the model in a different place from where you would like to host visdom (e.g., situation 2 & 3 in DDP mentioned above), you need to make sure that **this pickle directory is accessible by both the training environment and the visdom environment**. For example:
+- use a storage volume mounted to both environments, so you can access this storage simply using a file path
+- use an external storage of your choice
+  - for training
+    1. write a script that contains one function DeepLIIF can call to transfer the files like the following:
+    
+    ```
+    import boto3
+
+    credentials = <s3 credentials>
+
+    # make sure that the first argument is the source path
+    def save_to_s3(source_path):
+      # make sure the file name part is still unchanged, e.g., by keeping source_path.split('/')[-1]
+      # otherwise, you will need to change line 37-38 in run_visualizer_local.py to fit your final file names
+      target_path = ... 
+      
+      s3 = boto3.client('s3')
+      with open(source_path, "rb") as f:
+        s3.upload_fileobj(f, credentials["bucket_name"], target_path)
+
+    ```
+    
+    2. save it in a directory where you will call the training command; let's say the script is called `mysave.py`
+    3. tell DeepLIIF to use this by passing `--remote-transfer-cmd mysave.save_to_s3` to the training command (take kubernetes-based training service as an example):
+    
+    ```
+    import os
+    import torch.distributed as dist
+    def init_process():
+        dist.init_process_group(
+            backend='nccl',
+            init_method='tcp://' + os.environ['MASTER_ADDR'] + ':' + os.environ['MASTER_PORT'],
+            rank=int(os.environ['RANK']),
+            world_size=int(os.environ['WORLD_SIZE']))
+
+    root_folder = <data_dir>
+
+    if __name__ == '__main__':
+        init_process()
+        subprocess.run(f'python cli.py train --dataroot {root_folder} --remote True --batch-size 3 --gpu-ids 0 --remote True, --remote-transfer-cmd mysave.save_to_s3',shell=True)
+    ```
+    - note that this method if used will be applied **not only on the pickled snapshots for visdom input, but also the model files DeepLIIF saves**: DeepLIIF will trigger this provided method to store an **additional copy** of the model files into your external storage
+    
+  - for visualization
+    1. periodically check and download the latest pickle files from your external storage to your local environment
+    2. pass the pickle directory in your local enviroment to `python run_visualizer_local.py`
