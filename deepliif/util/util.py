@@ -119,3 +119,4 @@ def tensor2im(input_image, imtype=np.uint8):
 
 def tensor_to_pil(t):
     return Image.fromarray(tensor2im(t))
+
