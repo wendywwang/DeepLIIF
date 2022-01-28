@@ -236,6 +236,7 @@ class Visualizer():
                     webpage.add_images(ims, txts, links, width=self.win_size)
                 webpage.save()
 
+
     def plot_current_losses(self, epoch, counter_ratio, losses):                    
         """display the current losses on visdom display: dictionary of error labels and values
 

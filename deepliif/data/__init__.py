@@ -92,12 +92,12 @@ class CustomDatasetDataLoader(object):
         
         if os.getenv('DEEPLIIF_SEED',None) is None:
             self.dataloader = torch.utils.data.DataLoader(
-            self.dataset,
-            sampler=sampler,
-            batch_size=batch_size,
-            shuffle=not serial_batches if sampler is None else False,
-            num_workers=int(num_threads)
-        )
+                self.dataset,
+                sampler=sampler,
+                batch_size=batch_size,
+                shuffle=not serial_batches if sampler is None else False,
+                num_workers=int(num_threads)
+            )
         else:
             g = torch.Generator()
             g.manual_seed(0)
