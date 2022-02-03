@@ -94,6 +94,8 @@ def load_torchscript_model(model_pt_path, device):
 
 
 def load_eager_models(model_dir, devices):
+    print("Entering load_eager_models")
+    print("Devices: ", devices)
     input_nc = 3
     output_nc = 3
     ngf = 64
@@ -103,6 +105,7 @@ def load_eager_models(model_dir, devices):
     norm_layer = get_norm_layer(norm_type=norm)
 
     nets = {}
+    print("Init resnets")
     for n in ['G1', 'G2', 'G3', 'G4']:
         net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
         net.load_state_dict(torch.load(
@@ -110,15 +113,18 @@ def load_eager_models(model_dir, devices):
             map_location=devices[n]
         ))
         nets[n] = net
-
+    print(f"Keys of nets: {nets.keys()}")
+    print("Init unets")
     for n in ['G51', 'G52', 'G53', 'G54', 'G55']:
+        print(f"Starting unet {n}")
         net = UnetGenerator(input_nc, output_nc, 9, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
+        print(f"Loading state dict for {n}")
         net.load_state_dict(torch.load(
             os.path.join(model_dir, f'latest_net_{n}.pth'),
             map_location=devices[n]
         ))
         nets[n] = net
-
+    print(f"Keys of nets: {nets.keys()}")
     return nets
 
 
@@ -128,6 +134,7 @@ def init_nets(model_dir, eager_mode=True):
     Init DeepLIIF networks so that every net in
     the same group is deployed on the same GPU
     """
+    print("Entering init_nets")
     net_groups = [
         ('G1', 'G52'),
         ('G2', 'G53'),
@@ -138,9 +145,11 @@ def init_nets(model_dir, eager_mode=True):
 
     number_of_gpus = torch.cuda.device_count()
     if number_of_gpus:
+        print(f"Found {number_of_gpus} GPUs.")
         chunks = [itertools.chain.from_iterable(c) for c in chunker(net_groups, number_of_gpus)]
         devices = {n: torch.device(f'cuda:{i}') for i, g in enumerate(chunks) for n in g}
     else:
+        print("Using cpu for all")
         devices = {n: torch.device('cpu') for n in itertools.chain.from_iterable(net_groups)}
 
     if eager_mode:
@@ -178,9 +187,12 @@ def run_torchserve(img):
     return {k: tensor_to_pil(deserialize_tensor(v)) for k, v in res.json().items()}
 
 
-def run_dask(img):
+def run_dask(img, nets=None):
+    print("Entering run_dask")
     model_dir = os.getenv('DEEPLIIF_MODEL_DIR', './model-server/DeepLIIF_Latest_Model/')
-    nets = init_nets(model_dir)
+    
+    if nets is None:
+        nets = init_nets(model_dir)
 
     ts = transform(img.resize((512, 512)))
 
@@ -207,10 +219,21 @@ def run_dask(img):
     return res
 
 
-def inference(img, tile_size, overlap_size, use_torchserve=False):
+def inference(img, tile_size, overlap_size, use_torchserve=False, nets=None):
+    print("Entering inference")
     tiles = list(generate_tiles(img, tile_size, overlap_size))
 
-    run_fn = run_torchserve if use_torchserve else run_dask
+    if use_torchserve:
+        run_fn = run_torchserve
+
+    elif nets is not None:
+        def run_with_initialized_net(img):
+            return run_dask(img, nets=nets)
+
+        run_fn = run_with_initialized_net
+    else:
+        run_fn = run_dask
+
     res = [Tile(t.i, t.j, run_fn(t.img)) for t in tiles]
 
     def get_net_tiles(n):
