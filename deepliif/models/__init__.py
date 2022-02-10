@@ -110,7 +110,6 @@ def load_eager_models(model_dir, devices):
             map_location=devices[n]
         ))
         nets[n] = net
-
     for n in ['G51', 'G52', 'G53', 'G54', 'G55']:
         net = UnetGenerator(input_nc, output_nc, 9, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
         net.load_state_dict(torch.load(
@@ -118,7 +117,6 @@ def load_eager_models(model_dir, devices):
             map_location=devices[n]
         ))
         nets[n] = net
-
     return nets
 
 
@@ -178,39 +176,45 @@ def run_torchserve(img):
     return {k: tensor_to_pil(deserialize_tensor(v)) for k, v in res.json().items()}
 
 
-def run_dask(img):
+def run_dask(img, nets=None):
     model_dir = os.getenv('DEEPLIIF_MODEL_DIR', './model-server/DeepLIIF_Latest_Model/')
-    nets = init_nets(model_dir)
-
+    
+    if nets is None:
+        nets = init_nets(model_dir, eager_mode=False)
     ts = transform(img.resize((512, 512)))
-
     @delayed
     def forward(input, model):
         with torch.no_grad():
             return model(input.to(next(model.parameters()).device))
 
     seg_map = {'G1': 'G52', 'G2': 'G53', 'G3': 'G54', 'G4': 'G55'}
-
     lazy_gens = {k: forward(ts, nets[k]) for k in seg_map}
     gens = compute(lazy_gens)[0]
-
     lazy_segs = {v: forward(gens[k], nets[v]).to(torch.device('cpu')) for k, v in seg_map.items()}
     lazy_segs['G51'] = forward(ts, nets['G51']).to(torch.device('cpu'))
     segs = compute(lazy_segs)[0]
-
     seg_weights = [0.25, 0.15, 0.25, 0.1, 0.25]
     seg = torch.stack([torch.mul(n, w) for n, w in zip(segs.values(), seg_weights)]).sum(dim=0)
-
     res = {k: tensor_to_pil(v) for k, v in gens.items()}
     res['G5'] = tensor_to_pil(seg)
 
     return res
 
 
-def inference(img, tile_size, overlap_size, use_torchserve=False):
+def inference(img, tile_size, overlap_size, use_torchserve=False, nets=None):
     tiles = list(generate_tiles(img, tile_size, overlap_size))
 
-    run_fn = run_torchserve if use_torchserve else run_dask
+    if use_torchserve:
+        run_fn = run_torchserve
+
+    elif nets is not None:
+        def run_with_initialized_net(img):
+            return run_dask(img, nets=nets)
+
+        run_fn = run_with_initialized_net
+    else:
+        run_fn = run_dask
+
     res = [Tile(t.i, t.j, run_fn(t.img)) for t in tiles]
 
     def get_net_tiles(n):
